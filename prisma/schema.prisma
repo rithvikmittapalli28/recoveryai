@@ -1,0 +1,268 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RiskCaseStatus {
+  OPEN
+  PRIORITIZED
+  ACTIONED
+  RECOVERED
+  DISMISSED
+}
+
+enum RiskCaseSource {
+  PAYMENT_FAILURE
+  CHECKOUT_ABANDONMENT
+  REVENUE_LEAKAGE
+  MANUAL_REVIEW
+}
+
+enum OpportunityStatus {
+  OPEN
+  PROCESSING
+  ANALYZED
+  ACTION_PROPOSED
+  AWAITING_APPROVAL
+  ACTION_EXECUTED
+  RECOVERED
+  DECLINED
+  FAILED
+  EXPIRED
+}
+
+model Merchant {
+  id                   String               @id @default(cuid())
+  name                 String
+  razorpayAccountId    String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  merchantCredentials  MerchantCredential[]
+  revenueRiskCases     RevenueRiskCase[]
+  customers            Customer[]
+  orders               Order[]
+  payments             Payment[]
+  paymentLinks         PaymentLink[]
+  subscriptions        Subscription[]
+  financialEvents      FinancialEvent[]
+  revenueOpportunities RevenueOpportunity[]
+
+  @@index([razorpayAccountId])
+}
+
+model MerchantCredential {
+  id                     String    @id @default(cuid())
+  merchantId             String
+  provider               String    // e.g., 'RAZORPAY'
+  encryptedKeyId         String
+  encryptedKeySecret     String
+  encryptedWebhookSecret String?
+  environment            String    @default("TEST") // 'TEST' or 'LIVE'
+  isValidated            Boolean   @default(false)
+  lastValidatedAt        DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  merchant               Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@unique([merchantId, provider])
+  @@index([merchantId])
+}
+
+model RevenueRiskCase {
+  id                          String         @id @default(cuid())
+  merchantId                  String
+  source                      RiskCaseSource
+  status                      RiskCaseStatus @default(OPEN)
+  amountSubunits              Int
+  currency                    String         @db.VarChar(3)
+  reasonCode                  String?
+  recoveryPotentialSubunits   Int?
+  metadata                    Json?
+  createdAt                   DateTime       @default(now())
+  updatedAt                   DateTime       @updatedAt
+  merchant                    Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId, status])
+  @@index([source])
+}
+
+// --- New Models for Phase 2 ---
+
+model Customer {
+  id                 String    @id @default(cuid())
+  merchantId         String
+  razorpayCustomerId String?
+  name               String?
+  email              String?
+  contact            String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  merchant           Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  orders             Order[]
+  subscriptions      Subscription[]
+
+  @@unique([merchantId, razorpayCustomerId])
+  @@index([merchantId])
+}
+
+model Order {
+  id                 String    @id @default(cuid())
+  merchantId         String
+  customerId         String?
+  razorpayOrderId    String
+  amountSubunits     Int
+  currency           String    @db.VarChar(3)
+  status             String
+  receipt            String?
+  notes              Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  merchant           Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  customer           Customer? @relation(fields: [customerId], references: [id])
+  payments           Payment[]
+
+  @@unique([merchantId, razorpayOrderId])
+  @@index([merchantId])
+}
+
+model Payment {
+  id                 String    @id @default(cuid())
+  merchantId         String
+  orderId            String?
+  razorpayPaymentId  String
+  amountSubunits     Int
+  currency           String    @db.VarChar(3)
+  status             String    // authorized, captured, failed
+  errorReason        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  merchant           Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  order              Order?    @relation(fields: [orderId], references: [id])
+
+  @@unique([merchantId, razorpayPaymentId])
+  @@index([merchantId])
+}
+
+model PaymentLink {
+  id                    String    @id @default(cuid())
+  merchantId            String
+  razorpayPaymentLinkId String
+  amountSubunits        Int
+  currency              String    @db.VarChar(3)
+  status                String
+  shortUrl              String?
+  expiredAt             DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  merchant              Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@unique([merchantId, razorpayPaymentLinkId])
+  @@index([merchantId])
+}
+
+model Subscription {
+  id                     String    @id @default(cuid())
+  merchantId             String
+  customerId             String?
+  razorpaySubscriptionId String
+  planId                 String?
+  status                 String
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  merchant               Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  customer               Customer? @relation(fields: [customerId], references: [id])
+
+  @@unique([merchantId, razorpaySubscriptionId])
+  @@index([merchantId])
+}
+
+model WebhookEvent {
+  id                 String    @id @default(cuid())
+  razorpayEventId    String    @unique // From x-razorpay-event-id header
+  event              String
+  payload            Json
+  processed          Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+
+  @@index([razorpayEventId])
+}
+
+model FinancialEvent {
+  id                 String    @id @default(cuid())
+  merchantId         String?
+  eventType          String
+  source             String?   // e.g., 'razorpay'
+  sourceId           String?   // e.g., event ID from Razorpay
+  amountSubunits     Int?
+  currency           String?   @db.VarChar(3)
+  customerId         String?
+  orderId            String?
+  paymentId          String?
+  paymentLinkId      String?
+  subscriptionId     String?
+  invoiceId          String?
+  disputeId          String?
+  refundId           String?
+  metadata           Json?
+  occurredAt         DateTime
+  isSimulated        Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  merchant           Merchant? @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId, eventType])
+}
+
+model RevenueOpportunity {
+  id                 String    @id @default(cuid())
+  merchantId         String
+  source             String    // 'PAYMENT_FAILURE', 'CHECKOUT_ABANDONMENT', etc.
+  sourceId           String?
+  amountSubunits     Int
+  currency           String    @db.VarChar(3)
+  reason             String?
+  status             OpportunityStatus @default(OPEN)
+  customerId         String?
+  orderId            String?
+  paymentId          String?
+  paymentLinkId      String?
+  subscriptionId     String?
+  detectedAt         DateTime  @default(now())
+  resolvedAt         DateTime?
+  isSimulated        Boolean   @default(false)
+  priorityScore      Float?
+  leakageCategory    String?
+  evidence           Json?
+  metadata           Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  merchant           Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  recoveryActions    RecoveryAction[]
+
+  @@index([merchantId, status])
+}
+
+model RecoveryAction {
+  id                    String             @id @default(cuid())
+  revenueOpportunityId  String
+  actionType            String             
+  status                String             
+  razorpayPaymentLinkId String?
+  shortUrl              String?
+  amountSubunits        Int
+  currency              String             @db.VarChar(3)
+  aiReasoning           String?
+  recoveryProbability   Float?
+  expectedRecoveryValue Int?
+  metadata              Json?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  revenueOpportunity    RevenueOpportunity @relation(fields: [revenueOpportunityId], references: [id], onDelete: Cascade)
+
+  @@index([revenueOpportunityId])
+}

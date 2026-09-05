@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+coverage
+dist
+.env
+.env*.local
+keys.env
+*.log
+tsconfig.tsbuildinfo
+src/generated/prisma

@@ -1,0 +1,45 @@
+{
+  "name": "recoverai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered revenue recovery foundation for the Razorpay AI Buildathon.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "npx tsx --test src/__tests__/*.test.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^4.0.52",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "ai": "^7.0.85",
+    "ioredis": "^6.0.0",
+    "iron-session": "^9.0.1",
+    "lucide-react": "^1.37.0",
+    "next": "^16.3.3",
+    "pg": "^8.23.0",
+    "razorpay": "^2.9.8",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.4.0",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.3",
+    "prettier": "^3.9.6",
+    "prisma": "^7.10.0",
+    "typescript": "^6.0.3"
+  }
+}
