@@ -25,14 +25,20 @@ Currently, this outlines the theoretical cloud deployment workflow, as real depl
 18. [ ] Verify dashboard loading.
 19. [ ] Verify observability structured logs in Vercel.
 
-## POST-DEPLOYMENT
+## GITHUB ACTIONS CRON SETUP (VERCEL HOBBY PLAN)
 
-20. [ ] Confirm cron execution loops regularly (15/30 min).
-21. [ ] Confirm webhook delivery is successfully ingested (200 OK responses in Vercel edge logs).
-22. [ ] Confirm Redis rate limiting is rejecting excessive requests.
-23. [ ] Confirm logs are free of credentials or secrets.
-24. [ ] Confirm database connection pool remains healthy under load.
-25. [ ] Confirm Redis latency is within bounds.
+Since Vercel Hobby restricts cron schedules to once per day, this project utilizes **GitHub Actions** as the external scheduler.
+
+### Required GitHub Configuration
+In your GitHub repository, configure the following:
+1. **Repository Variable:** `RECOVERYAI_BASE_URL` (The deployed Vercel domain, e.g. `https://your-app.vercel.app`)
+2. **Repository Secret:** `CRON_SECRET` (Must precisely match the production Vercel environment variable)
+
+### Schedules
+- **Orchestrator** (`.github/workflows/recoverai-orchestrator.yml`): Runs every 15 minutes.
+- **Reconciliation** (`.github/workflows/recoverai-reconciliation.yml`): Runs every 30 minutes.
+
+## POST-DEPLOYMENT
 26. [ ] Confirm AI processing is analyzing test events.
 27. [ ] Confirm recovery workflow transitions (`PENDING_APPROVAL` -> `EXECUTING` -> `EXECUTED`).
 28. [ ] Confirm reconciliation catches simulated stale actions.

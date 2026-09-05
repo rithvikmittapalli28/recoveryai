@@ -1,0 +1,21 @@
+name: RecoverAI Orchestrator Cron
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run-orchestrator:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Orchestrator
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${{ vars.RECOVERYAI_BASE_URL }}/api/cron/orchestrator" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "Failed to trigger orchestrator. HTTP Status: $HTTP_STATUS"
+            exit 1
+          else
+            echo "Successfully triggered orchestrator. HTTP Status: $HTTP_STATUS"
+          fi

@@ -1,12 +1,2 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/orchestrator",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/cron/reconciliation",
-      "schedule": "*/30 * * * *"
-    }
-  ]
 }
